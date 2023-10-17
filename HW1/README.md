@@ -33,7 +33,7 @@
 - $s$: 第s个到发车班次, $s=1 \dots S$
 - $L_m$: 第m个人力班次的时长
 - $\beta_m$：第m个人力班次是否与时间粒度t重合 $\beta_m = 0~or~1$
-- $\alpha_s$: 第s个到发车班次是否与时间粒度t重合 $\alpha_s = 0~or~1$
+- $\alpha_{ts}$: 第s个到发车班次是否与时间粒度t重合 $\alpha_{ts} = 0~or~1$
 - $e_{nt}$：第n天的第t个时间粒度的人效
 - $Y_{ns}$: 第n天的第s个到发车班次的件量
 - $L_s$: 第s个物流班次的时长
@@ -49,7 +49,7 @@ $min\;\Sigma_{m=1}^M x_mL_m$
 
 $s.t.$ 
 
-$\Sigma_{m=1}^M \beta_m x_m e_{nt} + s_{tn}^- - s_{nt}^+ \geq \Sigma_{s=1}^S \alpha_s \frac{Y_{ns}}{L_s}l_{nt}\;\forall{t}, \forall{n}$ 
+$\Sigma_{m=1}^M \beta_{tm} x_m e_{nt} + s_{tn}^- - s_{nt}^+ \geq \Sigma_{s=1}^S \alpha_{ts} \frac{Y_{ns}}{L_s}l_{nt}\;\forall{t}, \forall{n}$ 
 
 $\Sigma_{m=1}^M x_{m} \leq f$
 
@@ -69,7 +69,7 @@ $min\; \Sigma_{w=1}^{W}x_{tw}L_w$
 
 $s.t.$
 
-$\Sigma_{w=1}^W \beta_w x_{tw} e_t l_{nt} + s_{nt}^- + s_{nt}^+ \geq \Sigma_{s=1}^{S}\alpha_s \frac{Y_{ns}}{L_s} l_{nt}\; \forall{t}$
+$\Sigma_{w=1}^W \beta_{tw} x_{tw} e_t l_{nt} + s_{nt}^- + s_{nt}^+ \geq \Sigma_{s=1}^{S}\alpha_{ts} \frac{Y_{ns}}{L_s} l_{nt}\; \forall{t}$
 
 $\Sigma_{w=1}^W x_{tw} \leq f_n$
 

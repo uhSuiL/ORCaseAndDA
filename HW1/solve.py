@@ -3,10 +3,10 @@ import pulp as pl
 
 def stage_1(
         L_manpower_shift:   list[int|float],    # shape: (M, 1)
-        beta:               list[int],          # shape: (M, 1), binary
+        beta:               list[list[int]],    # shape: (T, M), binary
         e:                  int,                # shape: (1) -- same for all
         l:                  list[list],         # shape: (N, T)
-        alpha:              list[int],          # shape: (S, 1), binary
+        alpha:              list[list[int]],    # shape: (T, S), binary
         Y:                  list[list],         # shape: (N, S)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
@@ -17,9 +17,9 @@ def stage_1(
     S = len(Y[0])
 
     # check params 
-    assert M == len(beta), (M, len(beta))                                              # check M
-    assert N == len(Y), len(Y)                                                         # check N
-    assert len(alpha) == S and S == len(L_dp_shift), (len(alpha), S, len(L_dp_shift))  # check S
+    assert M == len(beta[0]), (M, len(beta[0]))                                              # check M
+    assert N == len(Y), len(Y)                                                               # check N
+    assert len(alpha[0]) == S and S == len(L_dp_shift), (len(alpha[0]), S, len(L_dp_shift))  # check S
     assert type(e) == int and type(f) == int, (type(e), type(f))
 
     # Decision Variables
@@ -35,14 +35,14 @@ def stage_1(
     for n in range(N):
         for t in range(T):
             problem += (
-                pl.lpSum(beta[m] * x[m] * e[n][t] * l[n][t] for m in range(M)) >= 
-                sum([alpha[s] * (Y[n][s] / L_dp_shift[s]) * l[n][s] for s in range(S)])
+                pl.lpSum(beta[t][m] * x[m] * e[n][t] * l[n][t] for m in range(M)) >= 
+                sum([alpha[t][s] * (Y[n][s] / L_dp_shift[s]) * l[n][s] for s in range(S)])
             )
 
     # Constraints for manpower for a month if f is given
     if f is not None:
         problem += (
-            pl.lpSum(x[m] for m in range(M)) <= f
+            pl.lpSum(x[m] for m in range(M)) <= f * M
         )
 
     problem.solve()
@@ -52,10 +52,10 @@ def stage_1(
 def _stage_2_per_day(
         n:                  int,
         L_manpower_shift:   list[int|float],    # shape: (W, 1)
-        beta:               list[int],          # shape: (W, 1), binary
+        beta:               list[list[int]],    # shape: (T, W), binary
         e:                  int,                # shape: (1) -- same for all
         l_n:                list[list],         # shape: (T, 1)
-        alpha:              list[int],          # shape: (S, 1)
+        alpha:              list[list[int]],    # shape: (T, S), binary
         Y_n:                list[list],         # shape: (S, 1)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f_n:                int = None,         # shape: (1) -- one per day (actually for all)
@@ -65,8 +65,8 @@ def _stage_2_per_day(
     S = len(Y_n)
 
     # check params
-    assert len(beta) == W, len(beta)
-    assert len(alpha) == S and len(L_dp_shift) == S, (len(alpha), len(L_dp_shift))
+    assert len(beta[0]) == W, len(beta[0])
+    assert len(alpha[0]) == S and len(L_dp_shift) == S, (len(alpha[0]), len(L_dp_shift))
     assert type(f_n) == int and type(e) == int , (type(f_n), type(e))
 
     # Decision Variables
@@ -82,8 +82,8 @@ def _stage_2_per_day(
     # Constraints for quantity per time-gran for day n
     for t in range(T):
         problem += (
-            pl.LpSum(x_n[w] * beta[w] * e[t] * l_n[t] for w in range(W)) >=
-            sum([alpha[s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)])
+            pl.LpSum(x_n[w] * beta[t][w] * e[t] * l_n[t] for w in range(W)) >=
+            sum([alpha[t][s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)])
         )
 
     # Constraints for manpower in day n
@@ -98,10 +98,10 @@ def _stage_2_per_day(
 
 def stage_2(
         L_manpower_shift:   list[int|float],    # shape: (W, 1)
-        beta:               list[int],          # shape: (W, 1), binary
+        beta:               list[int],          # shape: (T, W), binary
         e:                  int,                # shape: (1) -- same for all
         l:                  list[list],         # shape: (N, T)
-        alpha:              list[int],          # shape: (S, 1), binary
+        alpha:              list[int],          # shape: (T, S), binary
         Y:                  list[list],         # shape: (N, S)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
@@ -112,9 +112,9 @@ def stage_2(
     S = len(Y[0])
 
     # check params
-    assert W == len(beta), (W, len(beta))                                              # check W
+    assert W == len(beta[0]), (W, len(beta[0]))                                              # check W
     assert N == len(Y), len(Y)                                                         # check N
-    assert len(alpha) == S and S == len(L_dp_shift), (len(alpha), S, len(L_dp_shift))  # check S
+    assert len(alpha[0]) == S and S == len(L_dp_shift), (len(alpha[0]), S, len(L_dp_shift))  # check S
     assert type(e) == int and type(f) == int, (type(e), type(f))
 
     # get solution for each day
