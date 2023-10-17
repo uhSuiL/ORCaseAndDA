@@ -14,20 +14,20 @@ with open('./cols_config.json', 'r') as f:
 class Data:
 
     def __init__(self, data: pd.DataFrame) -> None:
-        self.data                  = data[list(cols.values())].sort_values(by=cols["day"])
+        self.data                     = data[list(cols.values())].sort_values(by=cols["day"])
         self.data[cols["begin_tm"]]   = pd.to_datetime(self.data[cols["begin_tm"]].astype(str), format="%H%M")
         self.data[cols["end_tm"]]     = pd.to_datetime(self.data[cols["end_tm"]].astype(str), format="%H%M")
-        self.data["duration"]   = self.data[cols["end_tm"]] - self.data[cols["begin_tm"]]
+        self.data["duration"]         = self.data[cols["end_tm"]] - self.data[cols["begin_tm"]]
 
         self.dp_shift_tables: dict[pd.DataFrame]  = {
-            day: dp_table for day , dp_table in self.data.groupby(by='day', sort=True)
+            day: dp_table for day, dp_table in self.data.groupby(by='day', sort=True)
         }
 
         self.manpower_shift_tables: dict[str: list] = None
-    
+
     @property
     def time_granularities(self) -> dict[str: tuple]:
-        time_granularities: dict[pd.DataFrame] = dict()  #  {day: [begin_tm, end_tm, duration]}
+        time_granularities: dict[str: pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, duration]}
         for day in list(self.dp_shift_tables.keys()):
             dp_table = self.dp_shift_tables[day]
             time_granularities_per_day = pd.DataFrame(columns=['begin_tm', 'end_tm'])
@@ -35,26 +35,28 @@ class Data:
             time_stamps = list(set(dp_table['begin_tm'].to_list() + dp_table['end_tm'].to_list()))
             time_stamps.sort()
             for i in range(len(time_stamps) - 1):
-                time_granularities_per_day = pd.concat(
-                    [time_granularities_per_day, pd.Series({'begin_tm': time_stamps[i], 'end_tm': time_stamps[i+1]})], axis=0)
-            
+                time_granularities_per_day = pd.concat([
+                    time_granularities_per_day,
+                    pd.Series({'begin_tm': time_stamps[i], 'end_tm': time_stamps[i+1]})
+                ], axis=0)
+
+            time_granularities_per_day['duration'] = time_granularities_per_day['end_tm'] - time_granularities_per_day['begin_tm']
             time_granularities[str(day)] = time_granularities_per_day
 
-            time_granularities['duration'] = time_granularities['begin_tm'] - time_granularities['end_tm']
         return time_granularities
-    
+
     def gen_manpower_shifts(self, ignore: list[tuple] = None, lower = 4, upper = 9) -> dict[str: pd.DataFrame]:
         if ignore is None:  # suppose to be: [(begin_tm_1, end_tm_1), ......]
             ignore = []
 
-        man_power_shifts: dict[pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, staff_num, duration]}
+        man_power_shifts: dict[str: pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, staff_num, duration]}
         for day in list(self.dp_shift_tables.keys()):
             dp_table = self.dp_shift_tables[day]
-            
+
             man_power_shifts_per_day = pd.DataFrame()
             for begin_time in dp_table['begin_tm'].values:
                 for record in dp_table[
-                    (dp_table['end_tm'] > begin_time + pd.Timedelta(lower, unit='hour')) & 
+                    (dp_table['end_tm'] > begin_time + pd.Timedelta(lower, unit='hour')) &
                     (dp_table['end_tm'] < begin_time + pd.Timedelta(upper, unit='hour'))
                 ][['end_tm', 'staff_num']].values:
                     end_time, staff_num = record.tolist()
@@ -62,22 +64,23 @@ class Data:
                         man_power_shifts_per_day = pd.concat([
                             man_power_shifts_per_day,
                             pd.Series({
-                            'begin_tm': begin_time, 'end_tm': end_time, 
-                            'staff_num': staff_num, 'duration': end_time - begin_time
-                        })], axis=0)
+                                'begin_tm': begin_time, 'end_tm': end_time,
+                                'staff_num': staff_num, 'duration': end_time - begin_time
+                            })
+                        ], axis=0)
             man_power_shifts[str(day)] = man_power_shifts_per_day
 
         self.manpower_shift_tables = man_power_shifts
         return man_power_shifts  # {day: [begin_tm, end_tm, staff_num, duration]}
-    
+
     @property
     def Y(self) -> list[list]:
         Y = []
         for day in list(self.dp_shift_tables.keys()):
             Y_n = self.dp_shift_tables[day][cols["y"]].to_list()
             Y.append(Y_n)
-        return Y   
-    
+        return Y
+
     @property
     def l(self) -> list[list]:
         l = []
@@ -89,22 +92,22 @@ class Data:
         return l
 
     @property
-    def L_dp_shift(self) -> list[int|float]:
+    def L_dp_shift(self) -> list[int | float]:
         # 每天的到发车班次时间结构都一样, 选一天算就行
         return get_L_xxx_shift(list(self.dp_shift_tables.values())[0])
-    
+
     # ====== 注意：manpower_shift在stage1和stage2是不同的, 影响以下参数 ======
 
     @property
-    def L_manpower_shift(self) -> list[int|float]:
+    def L_manpower_shift(self) -> list[int | float]:
         # 每天的人力班次时间结构都一样, 选一天算就行
-        return get_L_xxx_shift(list(self.manpower_shift_tables.values())[0])  
-    
+        return get_L_xxx_shift(list(self.manpower_shift_tables.values())[0])
+
     @property
     def alpha(self) -> list[list[int]]:
         day = list(self.dp_shift_tables.keys())[0]
         return get_alpha_or_beta(self.dp_shift_tables[day], self.time_granularities[day])
-    
+
     @property
     def beta(self) -> list[list[int]]:
         day = list(self.manpower_shift_tables.keys())[0]
@@ -129,8 +132,8 @@ def get_alpha_or_beta(shift_table: pd.DataFrame, time_gran_table: pd.DataFrame) 
 
     return alpha_or_beta
 
-    
-def get_L_xxx_shift(shift_table: pd.DataFrame) -> list[int|float]:
+
+def get_L_xxx_shift(shift_table: pd.DataFrame) -> list[int | float]:
     # 获取L_manpower_shift或者L_df_shift向量的底层逻辑都一样, 所以只需一个函数
     L_xxx_shift = shift_table["duration"].to_list()
     assert len(L_xxx_shift) == shift_table.shape[0]
