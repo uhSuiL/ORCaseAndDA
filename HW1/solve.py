@@ -5,22 +5,22 @@ def stage_1(
         L_manpower_shift:   list[int|float],    # shape: (M, 1)
         beta:               list[int],          # shape: (M, 1), binary
         e:                  int,                # shape: (1) -- same for all
-        l:                  list[list],         # shape: (T, N)
+        l:                  list[list],         # shape: (N, T)
         alpha:              list[int],          # shape: (S, 1), binary
-        Y:                  list[list],         # shape: (S, N)
+        Y:                  list[list],         # shape: (N, S)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
 ) -> pl.LpProblem:
     M = len(L_manpower_shift)
-    T = len(l)
-    N = len(l[0])
-    S = len(Y)
+    N = len(l)
+    T = len(l[0])
+    S = len(Y[0])
 
     # check params 
-    assert M == len(beta), (M, len(beta))
-    assert type(e) == int, type(e)
-    assert N == len(Y[0])
-    assert len(alpha) == S and S == len(L_dp_shift), (len(alpha), S, len(L_dp_shift))
+    assert M == len(beta), (M, len(beta))                                              # check M
+    assert N == len(Y), len(Y)                                                         # check N
+    assert len(alpha) == S and S == len(L_dp_shift), (len(alpha), S, len(L_dp_shift))  # check S
+    assert type(e) == int and type(f) == int, (type(e), type(f))
 
     # Decision Variables
     x = {m: pl.LpVariable(f"x_{m}", lowBound=0, cat="Integer") for m in range(M)}
@@ -32,11 +32,11 @@ def stage_1(
     )
 
     # Constraints for quantity per time-gran per day
-    for t in range(T):
-        for n in range(N):
+    for n in range(N):
+        for t in range(T):
             problem += (
-                pl.lpSum(beta[m] * x[m] * e[t][n] * l[t][n] for m in range(M)) >= 
-                sum([alpha[s] * (Y[s][n] / L_dp_shift[s]) * l[t][n] for s in range(S)])
+                pl.lpSum(beta[m] * x[m] * e[n][t] * l[n][t] for m in range(M)) >= 
+                sum([alpha[s] * (Y[n][s] / L_dp_shift[s]) * l[n][s] for s in range(S)])
             )
 
     # Constraints for manpower for a month if f is given
@@ -94,3 +94,33 @@ def _stage_2_per_day(
 
     problem.solve()
     return problem
+
+
+def stage_2(
+        L_manpower_shift:   list[int|float],    # shape: (W, 1)
+        beta:               list[int],          # shape: (W, 1), binary
+        e:                  int,                # shape: (1) -- same for all
+        l:                  list[list],         # shape: (N, T)
+        alpha:              list[int],          # shape: (S, 1), binary
+        Y:                  list[list],         # shape: (N, S)
+        L_dp_shift:         list[int|float],    # shape: (S, 1)
+        f:                  int = None,         # shape: (1) -- only one
+) -> list[pl.LpProblem]:
+    W = len(L_manpower_shift)
+    N = len(l)
+    T = len(l[0])
+    S = len(Y[0])
+
+    # check params
+    assert W == len(beta), (W, len(beta))                                              # check W
+    assert N == len(Y), len(Y)                                                         # check N
+    assert len(alpha) == S and S == len(L_dp_shift), (len(alpha), S, len(L_dp_shift))  # check S
+    assert type(e) == int and type(f) == int, (type(e), type(f))
+
+    # get solution for each day
+    solutions: list[pl.LpProblem] = [
+        _stage_2_per_day(n, L_manpower_shift, beta, e, l[n], alpha, Y[n], L_dp_shift, f)
+        for n in range(N)
+    ]
+
+    return solutions
