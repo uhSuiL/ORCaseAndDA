@@ -2,14 +2,14 @@ import pulp as pl
 
 
 def stage_1(
-        L_manpower_shift:   list[int],    # shape: (M, 1)
-        beta:               list[int],    # shape: (M, 1), binary
-        e:                  int,          # shape: (1) -- same for all
-        l:                  list[list],   # shape: (T, N)
-        alpha:              list[int],    # shape: (S, 1)
-        Y:                  list[list],   # shape: (S, N)
-        L_dp_shift:         list[int],    # shape: (S, 1)
-        f:                  int = None,   # shape: (1) -- only one
+        L_manpower_shift:   list[int|float],    # shape: (M, 1)
+        beta:               list[int],          # shape: (M, 1), binary
+        e:                  int,                # shape: (1) -- same for all
+        l:                  list[list],         # shape: (T, N)
+        alpha:              list[int],          # shape: (S, 1), binary
+        Y:                  list[list],         # shape: (S, N)
+        L_dp_shift:         list[int|float],    # shape: (S, 1)
+        f:                  int = None,         # shape: (1) -- only one
 ) -> pl.LpProblem:
     M = len(L_manpower_shift)
     T = len(l)
@@ -51,25 +51,46 @@ def stage_1(
 
 def _stage_2_per_day(
         n:                  int,
-        L_manpower_shift:   list[int],  # shape: (W, 1)
-        beta:               list[int],  # shape: (W, 1), binary
-        e:                  int,        # shape: (1) -- same for all
-        l:                  list[list], # shape: (T, N)
-        alpha:              list[int],  # shape: (S)
-        Y:                  list[list], # shape: (S, N)
-        L_dp_shift:         list[int],  # shape: (S, 1)
-        f_n:                int,        # shape: (1) -- one per day (actually for all)
+        L_manpower_shift:   list[int|float],    # shape: (W, 1)
+        beta:               list[int],          # shape: (W, 1), binary
+        e:                  int,                # shape: (1) -- same for all
+        l_n:                list[list],         # shape: (T, 1)
+        alpha:              list[int],          # shape: (S, 1)
+        Y_n:                list[list],         # shape: (S, 1)
+        L_dp_shift:         list[int|float],    # shape: (S, 1)
+        f_n:                int = None,         # shape: (1) -- one per day (actually for all)
 ) -> pl.LpProblem:
     W = len(L_manpower_shift)
-    T = len(l)
-    N = len(l[0])
-    S = len(Y)
+    T = len(l_n)
+    S = len(Y_n)
 
-    # Decision Variable
-    x = {w: pl.LpVariable(f"x_{w}", lowBound=0, cat="Integer") for w in range(W)}
+    # check params
+    assert len(beta) == W, len(beta)
+    assert len(alpha) == S and len(L_dp_shift) == S, (len(alpha), len(L_dp_shift))
+    assert type(f_n) == int and type(e) == int , (type(f_n), type(e))
+
+    # Decision Variables
+    # a set of solution for each day
+    x_n = {w: pl.LpVariable(f"x_{n}_{w}", lowBound=0, cat="Integer") for w in range(W)}
 
     # Objective Function
     problem = pl.LpProblem(f"stage_2_{n}", pl.LpMinimize)
     problem += (
-        
+        pl.lpSum(x_n[w] * L_manpower_shift[w] for w in range(W))
     )
+
+    # Constraints for quantity per time-gran for day n
+    for t in range(T):
+        problem += (
+            pl.LpSum(x_n[w] * beta[w] * e[t] * l_n[t] for w in range(W)) >=
+            sum([alpha[s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)])
+        )
+
+    # Constraints for manpower in day n
+    if f_n is not None:
+        problem += (
+            pl.lpSum(x_n[w] for w in range(W)) <= f_n
+        )
+
+    problem.solve()
+    return problem
