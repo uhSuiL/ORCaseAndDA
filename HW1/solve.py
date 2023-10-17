@@ -98,10 +98,10 @@ def _stage_2_per_day(
 
 def stage_2(
         L_manpower_shift:   list[int|float],    # shape: (W, 1)
-        beta:               list[int],          # shape: (T, W), binary
+        beta:               list[list[int]],    # shape: (T, W), binary
         e:                  int,                # shape: (1) -- same for all
         l:                  list[list],         # shape: (N, T)
-        alpha:              list[int],          # shape: (T, S), binary
+        alpha:              list[list[int]],    # shape: (T, S), binary
         Y:                  list[list],         # shape: (N, S)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
