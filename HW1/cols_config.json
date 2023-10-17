@@ -1,0 +1,11 @@
+{
+    "dp_schedule":          "dp_schedule",
+    "dp_period":            "dp_period",
+    "staff_effi_standard":  "staff_effi_standard",
+    "staff_effi_full":      "staff_effi_full",
+    "staff_num":            "staff_num",
+    "day":                  "day",
+    "begin_tm":             "begin_tm",
+    "end_tm":               "end_tm",
+    "y":                    "y"
+}
