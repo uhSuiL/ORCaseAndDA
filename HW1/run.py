@@ -28,4 +28,10 @@ if __name__ == "__main__":
         beta = data.beta
     )
 
-    print(pl.LpStatus[solved_problem.status])
+    print("Stage 1: ", pl.LpStatus[solved_problem.status])
+    print(solved_problem.objective)
+    print(solved_problem.constraints)
+
+    # 打印第一阶段的解
+    for var in solved_problem.variables():
+        print(var, var.value())

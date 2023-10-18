@@ -23,7 +23,7 @@ class Data:
         self.data["duration"]         = self.data[cols["end_tm"]] - self.data[cols["begin_tm"]]
 
         # 每天的表都必须按照begin_tm从小到大排好序
-        self.dp_shift_tables: dict[str: pd.DataFrame]  = {
+        self.dp_shift_tables: dict[str: pd.DataFrame] = {
             str(day): dp_table.sort_values(by=cols['begin_tm']) for day, dp_table in self.data.groupby(by='day', sort=True)
         }
 
@@ -39,10 +39,11 @@ class Data:
             time_stamps = list(set(dp_table['begin_tm'].to_list() + dp_table['end_tm'].to_list()))
             time_stamps.sort()  # TODO: 检查是否按顺序从小到大排列
             for i in range(len(time_stamps) - 1):
-                time_granularities_per_day = pd.concat([
-                    time_granularities_per_day,
-                    pd.DataFrame({'begin_tm': [time_stamps[i]], 'end_tm': [time_stamps[i+1]]})
-                ], axis=0)
+                new_df = pd.DataFrame({'begin_tm': [time_stamps[i]], 'end_tm': [time_stamps[i+1]]})
+                if time_granularities_per_day.empty:
+                    time_granularities_per_day = new_df
+                else:
+                    time_granularities_per_day = pd.concat([time_granularities_per_day, new_df], axis=0)
 
             time_granularities_per_day['duration'] = time_granularities_per_day['end_tm'] - time_granularities_per_day['begin_tm']
             time_granularities[str(day)] = time_granularities_per_day
@@ -65,13 +66,11 @@ class Data:
                 ][['end_tm', 'staff_num']].values:
                     end_time, staff_num = record.tolist()
                     if (begin_time, end_time) not in ignore:
-                        man_power_shifts_per_day = pd.concat([
-                            man_power_shifts_per_day,
-                            pd.DataFrame({
-                                'begin_tm': [begin_time], 'end_tm': [end_time],
-                                'staff_num': [staff_num], 'duration': [end_time - begin_time]
-                            })
-                        ], axis=0)
+                        new_df = pd.DataFrame({'begin_tm': [begin_time], 'end_tm': [end_time], 'staff_num': [staff_num], 'duration': [end_time - begin_time]})
+                        if man_power_shifts_per_day.empty:
+                            man_power_shifts_per_day = new_df
+                        else:
+                            man_power_shifts_per_day = pd.concat([man_power_shifts_per_day, new_df], axis=0)
             man_power_shifts[str(day)] = man_power_shifts_per_day
 
         self.manpower_shift_tables = man_power_shifts
@@ -122,11 +121,11 @@ def get_alpha_or_beta(shift_table: pd.DataFrame, time_gran_table: pd.DataFrame) 
     # 获取alpha或者beta矩阵的底层逻辑都一样, 所以只需一个函数
     # 每天的结构一样, 取一天的算即可
     alpha_or_beta = []
-    for i, time_gran in time_gran_table.iterrows():
+    for t, time_gran in time_gran_table.iterrows():
         alpha_or_beta_t = []
-        for j, shift in shift_table.iterrows():
+        for s, shift in shift_table.iterrows():
             alpha_or_beta_t_s = 0
-            if (time_gran[cols["begin_tm"]] <= shift[cols["begin_tm"]]) and (time_gran[cols["end_tm"]] >= shift[cols["end_tm"]]):
+            if (time_gran[cols["begin_tm"]] >= shift[cols["begin_tm"]]) and (time_gran[cols["end_tm"]] <= shift[cols["end_tm"]]):
                 alpha_or_beta_t_s = 1
             alpha_or_beta_t.append(alpha_or_beta_t_s)
         alpha_or_beta.append(alpha_or_beta_t)
