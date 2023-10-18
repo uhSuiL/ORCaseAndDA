@@ -7,8 +7,8 @@ from util import solve
 if __name__ == "__main__":
     excel = pd.read_excel('./effiandshifts.xlsx')
 
-    e = excel['staff_effi_standard']
-    f = excel['staff_num']
+    e = excel.loc[0, 'staff_effi_standard'].item()
+    f = excel.loc[0, 'staff_num'].item()
 
     data = dp.Data(excel)
 

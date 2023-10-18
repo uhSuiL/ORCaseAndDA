@@ -3,6 +3,9 @@
 #  while for python lower than 3.6, there is no order in dict.
 # -------------------------------------------------------------
 
+# 计算时间间隔精确到分钟(in L_xxx_shift, l)
+
+
 import json
 import pandas as pd
 
@@ -87,7 +90,7 @@ class Data:
         for day in list(self.time_granularities.keys()):
             l_n = []
             for t, time_gran in self.time_granularities[day].iterrows():
-                l_n.append(time_gran["duration"])
+                l_n.append(int(time_gran["duration"] / pd.Timedelta(minutes=1)))
             l.append(l_n)
         return l
 
@@ -135,7 +138,6 @@ def get_alpha_or_beta(shift_table: pd.DataFrame, time_gran_table: pd.DataFrame) 
 
 def get_L_xxx_shift(shift_table: pd.DataFrame) -> list[int | float]:
     # 获取L_manpower_shift或者L_df_shift向量的底层逻辑都一样, 所以只需一个函数
-    # 时间间隔精确到分钟
     L_xxx_shift = (shift_table["duration"] / pd.Timedelta(minutes=1)).astype(int).to_list()
     assert len(L_xxx_shift) == shift_table.shape[0]
     return L_xxx_shift

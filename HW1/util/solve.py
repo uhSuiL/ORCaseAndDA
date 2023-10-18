@@ -35,7 +35,7 @@ def stage_1(
     for n in range(N):
         for t in range(T):
             problem += (
-                pl.lpSum(beta[t][m] * x[m] * e[n][t] * l[n][t] for m in range(M)) >= 
+                pl.lpSum(beta[t][m] * x[m] * e * l[n][t] for m in range(M)) >=
                 sum([alpha[t][s] * (Y[n][s] / L_dp_shift[s]) * l[n][s] for s in range(S)])
             )
 
