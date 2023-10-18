@@ -19,8 +19,8 @@ class Data:
         self.data[cols["end_tm"]]     = pd.to_datetime(self.data[cols["end_tm"]].astype(str), format="%H%M")
         self.data["duration"]         = self.data[cols["end_tm"]] - self.data[cols["begin_tm"]]
 
-        self.dp_shift_tables: dict[pd.DataFrame]  = {
-            day: dp_table for day, dp_table in self.data.groupby(by='day', sort=True)
+        self.dp_shift_tables: dict[str: pd.DataFrame]  = {
+            str(day): dp_table for day, dp_table in self.data.groupby(by='day', sort=True)
         }
 
         self.manpower_shift_tables: dict[str: list] = None
@@ -37,7 +37,7 @@ class Data:
             for i in range(len(time_stamps) - 1):
                 time_granularities_per_day = pd.concat([
                     time_granularities_per_day,
-                    pd.Series({'begin_tm': time_stamps[i], 'end_tm': time_stamps[i+1]})
+                    pd.DataFrame({'begin_tm': [time_stamps[i]], 'end_tm': [time_stamps[i+1]]})
                 ], axis=0)
 
             time_granularities_per_day['duration'] = time_granularities_per_day['end_tm'] - time_granularities_per_day['begin_tm']
@@ -63,9 +63,9 @@ class Data:
                     if (begin_time, end_time) not in ignore:
                         man_power_shifts_per_day = pd.concat([
                             man_power_shifts_per_day,
-                            pd.Series({
-                                'begin_tm': begin_time, 'end_tm': end_time,
-                                'staff_num': staff_num, 'duration': end_time - begin_time
+                            pd.DataFrame({
+                                'begin_tm': [begin_time], 'end_tm': [end_time],
+                                'staff_num': [staff_num], 'duration': [end_time - begin_time]
                             })
                         ], axis=0)
             man_power_shifts[str(day)] = man_power_shifts_per_day
@@ -135,6 +135,7 @@ def get_alpha_or_beta(shift_table: pd.DataFrame, time_gran_table: pd.DataFrame) 
 
 def get_L_xxx_shift(shift_table: pd.DataFrame) -> list[int | float]:
     # 获取L_manpower_shift或者L_df_shift向量的底层逻辑都一样, 所以只需一个函数
-    L_xxx_shift = shift_table["duration"].to_list()
+    # 时间间隔精确到分钟
+    L_xxx_shift = (shift_table["duration"] / pd.Timedelta(minutes=1)).astype(int).to_list()
     assert len(L_xxx_shift) == shift_table.shape[0]
     return L_xxx_shift
