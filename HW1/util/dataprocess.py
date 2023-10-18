@@ -22,8 +22,9 @@ class Data:
         self.data[cols["end_tm"]]     = pd.to_datetime(self.data[cols["end_tm"]].astype(str), format="%H%M")
         self.data["duration"]         = self.data[cols["end_tm"]] - self.data[cols["begin_tm"]]
 
+        # 每天的表都必须按照begin_tm从小到大排好序
         self.dp_shift_tables: dict[str: pd.DataFrame]  = {
-            str(day): dp_table for day, dp_table in self.data.groupby(by='day', sort=True)
+            str(day): dp_table.sort_values(by=cols['begin_tm']) for day, dp_table in self.data.groupby(by='day', sort=True)
         }
 
         self.manpower_shift_tables: dict[str: list] = None
@@ -36,7 +37,7 @@ class Data:
             time_granularities_per_day = pd.DataFrame(columns=['begin_tm', 'end_tm'])
 
             time_stamps = list(set(dp_table['begin_tm'].to_list() + dp_table['end_tm'].to_list()))
-            time_stamps.sort()
+            time_stamps.sort()  # TODO: 检查是否按顺序从小到大排列
             for i in range(len(time_stamps) - 1):
                 time_granularities_per_day = pd.concat([
                     time_granularities_per_day,
@@ -122,13 +123,13 @@ def get_alpha_or_beta(shift_table: pd.DataFrame, time_gran_table: pd.DataFrame) 
     # 每天的结构一样, 取一天的算即可
     alpha_or_beta = []
     for i, time_gran in time_gran_table.iterrows():
-        alpha_t = []
+        alpha_or_beta_t = []
         for j, shift in shift_table.iterrows():
-            alpha_t_s = 0
+            alpha_or_beta_t_s = 0
             if (time_gran[cols["begin_tm"]] <= shift[cols["begin_tm"]]) and (time_gran[cols["end_tm"]] >= shift[cols["end_tm"]]):
-                alpha_t_s = 1
-            alpha_t.append(alpha_t_s)
-        alpha_or_beta.append(alpha_t)
+                alpha_or_beta_t_s = 1
+            alpha_or_beta_t.append(alpha_or_beta_t_s)
+        alpha_or_beta.append(alpha_or_beta_t)
 
     assert len(alpha_or_beta) == time_gran_table.shape[0], (len(alpha_or_beta), time_gran_table.shape, alpha_or_beta)
     assert len(alpha_or_beta[0]) == shift_table.shape[0], (len(alpha_or_beta[0]), shift_table.shape, alpha_or_beta)
