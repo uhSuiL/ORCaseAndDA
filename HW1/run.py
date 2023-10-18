@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # stage_one
     data.gen_manpower_shifts()
 
-    solved_problem = solve.stage_1(
+    solved_problem, x = solve.stage_1(
         e = e,
         f = f,
 
@@ -28,10 +28,26 @@ if __name__ == "__main__":
         beta = data.beta
     )
 
-    print("Stage 1: ", pl.LpStatus[solved_problem.status])
-    print(solved_problem.objective)
     print(solved_problem.constraints)
 
     # 打印第一阶段的解
-    for var in solved_problem.variables():
-        print(var, var.value())
+    print('-----')
+    for x_n in x.values():
+        print(x_n, x_n.value())
+
+    ignore = [i for i in range(len(x.values())) if list(x.values())[i] == 0]
+
+    data.gen_manpower_shifts(ignore=ignore)
+
+    solutions = solve.stage_2(
+        e=e,
+        f=f,
+
+        Y=data.Y,
+        L_dp_shift=data.L_dp_shift,
+        l=data.l,
+
+        L_manpower_shift=data.L_manpower_shift,
+        alpha=data.alpha,
+        beta=data.beta
+    )

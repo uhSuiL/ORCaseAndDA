@@ -25,7 +25,7 @@ class Data:
 
         # 每天的表都必须按照begin_tm从小到大排好序
         self.dp_shift_tables: dict[str: pd.DataFrame] = {
-            str(day): dp_table.sort_values(by=cols['begin_tm']) for day, dp_table in self.data.groupby(by='day', sort=True)
+            str(day): dp_table.sort_values(by=cols['begin_tm']).reset_index(drop=True) for day, dp_table in self.data.groupby(by='day', sort=True)
         }
 
         self.manpower_shift_tables: dict[str: list] = None
@@ -51,13 +51,14 @@ class Data:
 
         return time_granularities
 
-    def gen_manpower_shifts(self, ignore: list[tuple] = None, lower = 4, upper = 9) -> dict[str: pd.DataFrame]:
+    def gen_manpower_shifts(self, ignore: list[int] = None, lower = 4, upper = 9) -> dict[str: pd.DataFrame]:
+        # TODO: 改ignore, ignore实际上为要删除的人力班次的index
         if ignore is None:  # suppose to be: [(begin_tm_1, end_tm_1), ......]
             ignore = []
 
         man_power_shifts: dict[str: pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, staff_num, duration]}
         for day in list(self.dp_shift_tables.keys()):
-            dp_table = self.dp_shift_tables[day]
+            dp_table = self.dp_shift_tables[day].drop(ignore, axis=0)  # TODO: 需确保dp_shift_tables中每张表的行号(index)是真实行号
 
             man_power_shifts_per_day = pd.DataFrame()
             for begin_time in dp_table['begin_tm'].values:
@@ -66,12 +67,11 @@ class Data:
                     (dp_table['end_tm'] <= begin_time + pd.Timedelta(upper, unit='hour'))
                 ][['end_tm', 'staff_num']].values:
                     end_time, staff_num = record.tolist()
-                    if (begin_time, end_time) not in ignore:
-                        new_df = pd.DataFrame({'begin_tm': [begin_time], 'end_tm': [end_time], 'staff_num': [staff_num], 'duration': [end_time - begin_time]})
-                        if man_power_shifts_per_day.empty:
-                            man_power_shifts_per_day = new_df
-                        else:
-                            man_power_shifts_per_day = pd.concat([man_power_shifts_per_day, new_df], axis=0)
+                    new_df = pd.DataFrame({'begin_tm': [begin_time], 'end_tm': [end_time], 'staff_num': [staff_num], 'duration': [end_time - begin_time]})
+                    if man_power_shifts_per_day.empty:
+                        man_power_shifts_per_day = new_df
+                    else:
+                        man_power_shifts_per_day = pd.concat([man_power_shifts_per_day, new_df], axis=0)
             man_power_shifts[str(day)] = man_power_shifts_per_day
 
         self.manpower_shift_tables = man_power_shifts

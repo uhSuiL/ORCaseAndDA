@@ -10,7 +10,7 @@ def stage_1(
         Y:                  list[list],         # shape: (N, S)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
-) -> pl.LpProblem:
+) -> tuple[pl.LpProblem, dict[int: pl.LpVariable]]:
     M = len(L_manpower_shift)
     N = len(l)
     T = len(l[0])
@@ -46,7 +46,8 @@ def stage_1(
         )
 
     problem.solve()
-    return problem
+    print("Stage 1: ", pl.LpStatus[problem.status], "; Objective:", problem.objective)
+    return problem, x
 
 
 def _stage_2_per_day(
@@ -59,7 +60,7 @@ def _stage_2_per_day(
         Y_n:                list[list],         # shape: (S, 1)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f_n:                int = None,         # shape: (1) -- one per day (actually for all)
-) -> pl.LpProblem:
+) -> tuple[pl.LpProblem, dict[int: pl.LpVariable]]:
     W = len(L_manpower_shift)
     T = len(l_n)
     S = len(Y_n)
@@ -92,8 +93,10 @@ def _stage_2_per_day(
             pl.lpSum(x_n[w] for w in range(W)) <= f_n
         )
 
+    print(f"Stage 2 day_{n}: {pl.LpStatus[problem.status]}, Objective: {problem.objective}")
+
     problem.solve()
-    return problem
+    return problem, x_n
 
 
 def stage_2(
@@ -105,7 +108,7 @@ def stage_2(
         Y:                  list[list],         # shape: (N, S)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
-) -> list[pl.LpProblem]:
+) -> list[tuple[pl.LpProblem, dict[int: pl.LpVariable]]]:
     W = len(L_manpower_shift)
     N = len(l)
     T = len(l[0])
@@ -118,7 +121,7 @@ def stage_2(
     assert type(e) == int and type(f) == int, (type(e), type(f))
 
     # get solution for each day
-    solutions: list[pl.LpProblem] = [
+    solutions: list[tuple[pl.LpProblem, dict[int: pl.LpVariable]]] = [
         _stage_2_per_day(n, L_manpower_shift, beta, e, l[n], alpha, Y[n], L_dp_shift, f)
         for n in range(N)
     ]
