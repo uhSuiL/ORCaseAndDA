@@ -55,9 +55,9 @@ def _stage_2_per_day(
         L_manpower_shift:   list[int|float],    # shape: (W, 1)
         beta:               list[list[int]],    # shape: (T, W), binary
         e:                  int,                # shape: (1) -- same for all
-        l_n:                list[list],         # shape: (T, 1)
+        l_n:                list[float],        # shape: (T, 1)
         alpha:              list[list[int]],    # shape: (T, S), binary
-        Y_n:                list[list],         # shape: (S, 1)
+        Y_n:                list[int],          # shape: (S, 1)
         L_dp_shift:         list[int|float],    # shape: (S, 1)
         f_n:                int = None,         # shape: (1) -- one per day (actually for all)
 ) -> tuple[pl.LpProblem, dict[int: pl.LpVariable]]:
@@ -83,7 +83,7 @@ def _stage_2_per_day(
     # Constraints for quantity per time-gran for day n
     for t in range(T):
         problem += (
-            pl.LpSum(x_n[w] * beta[t][w] * e[t] * l_n[t] for w in range(W)) >=
+            pl.lpSum(x_n[w] * beta[t][w] * e * l_n[t] for w in range(W)) >=
             sum([alpha[t][s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)])
         )
 

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     for x_n in x.values():
         print(x_n, x_n.value())
 
-    ignore = [i for i in range(len(x.values())) if list(x.values())[i] == 0]
+    ignore = [i for i in range(len(list(x.values()))) if list(x.values())[i].value() == 0]
 
     data.gen_manpower_shifts(ignore=ignore)
 

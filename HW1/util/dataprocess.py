@@ -1,5 +1,5 @@
 # --------------------- ATTENTION -----------------------------
-#  the implementaion depends on the order in the `python dict`,
+#  the implementation depends on the order in the `python dict`,
 #  while for python lower than 3.6, there is no order in dict.
 # -------------------------------------------------------------
 
@@ -52,14 +52,13 @@ class Data:
         return time_granularities
 
     def gen_manpower_shifts(self, ignore: list[int] = None, lower = 4, upper = 9) -> dict[str: pd.DataFrame]:
-        # TODO: 改ignore, ignore实际上为要删除的人力班次的index
+        # TODO: 改ignore, ignore实际上为要删除的人力班次的index, 而不是到发车班次!
         if ignore is None:  # suppose to be: [(begin_tm_1, end_tm_1), ......]
             ignore = []
 
         man_power_shifts: dict[str: pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, staff_num, duration]}
         for day in list(self.dp_shift_tables.keys()):
-            dp_table = self.dp_shift_tables[day].drop(ignore, axis=0)  # TODO: 需确保dp_shift_tables中每张表的行号(index)是真实行号
-
+            dp_table = self.dp_shift_tables[day]
             man_power_shifts_per_day = pd.DataFrame()
             for begin_time in dp_table['begin_tm'].values:
                 for record in dp_table[
@@ -72,7 +71,8 @@ class Data:
                         man_power_shifts_per_day = new_df
                     else:
                         man_power_shifts_per_day = pd.concat([man_power_shifts_per_day, new_df], axis=0)
-            man_power_shifts[str(day)] = man_power_shifts_per_day
+            # 要保证人力班次表的index是真实顺序
+            man_power_shifts[str(day)] = man_power_shifts_per_day.reset_index(drop=True).drop(ignore, axis=0)
 
         self.manpower_shift_tables = man_power_shifts
         return man_power_shifts  # {day: [begin_tm, end_tm, staff_num, duration]}
