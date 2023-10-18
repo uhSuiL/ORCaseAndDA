@@ -3,6 +3,7 @@
 #  while for python lower than 3.6, there is no order in dict.
 # -------------------------------------------------------------
 
+# TODO: 时间单位应该一小时为单位, 对应人效是以小时为单位
 # 计算时间间隔精确到分钟(in L_xxx_shift, l)
 
 
@@ -61,8 +62,8 @@ class Data:
             man_power_shifts_per_day = pd.DataFrame()
             for begin_time in dp_table['begin_tm'].values:
                 for record in dp_table[
-                    (dp_table['end_tm'] > begin_time + pd.Timedelta(lower, unit='hour')) &
-                    (dp_table['end_tm'] < begin_time + pd.Timedelta(upper, unit='hour'))
+                    (dp_table['end_tm'] >= begin_time + pd.Timedelta(lower, unit='hour')) &
+                    (dp_table['end_tm'] <= begin_time + pd.Timedelta(upper, unit='hour'))
                 ][['end_tm', 'staff_num']].values:
                     end_time, staff_num = record.tolist()
                     if (begin_time, end_time) not in ignore:
@@ -90,7 +91,7 @@ class Data:
         for day in list(self.time_granularities.keys()):
             l_n = []
             for t, time_gran in self.time_granularities[day].iterrows():
-                l_n.append(int(time_gran["duration"] / pd.Timedelta(minutes=1)))
+                l_n.append(float((time_gran["duration"] / pd.Timedelta(minutes=1))) / 60)  # 分钟转小时
             l.append(l_n)
         return l
 
@@ -138,6 +139,7 @@ def get_alpha_or_beta(shift_table: pd.DataFrame, time_gran_table: pd.DataFrame) 
 
 def get_L_xxx_shift(shift_table: pd.DataFrame) -> list[int | float]:
     # 获取L_manpower_shift或者L_df_shift向量的底层逻辑都一样, 所以只需一个函数
-    L_xxx_shift = (shift_table["duration"] / pd.Timedelta(minutes=1)).astype(int).to_list()
+    L_xxx_shift = (shift_table["duration"] / pd.Timedelta(minutes=1)).astype(float) / 60
+    L_xxx_shift = L_xxx_shift.to_list()
     assert len(L_xxx_shift) == shift_table.shape[0]
     return L_xxx_shift
