@@ -2,13 +2,13 @@ import pulp as pl
 
 
 def stage_1(
-        L_manpower_shift:   list[int|float],    # shape: (M, 1)
+        L_manpower_shift:   list[int | float],    # shape: (M, 1)
         beta:               list[list[int]],    # shape: (T, M), binary
         e:                  int,                # shape: (1) -- same for all
         l:                  list[list],         # shape: (N, T)
         alpha:              list[list[int]],    # shape: (T, S), binary
         Y:                  list[list],         # shape: (N, S)
-        L_dp_shift:         list[int|float],    # shape: (S, 1)
+        L_dp_shift:         list[int | float],    # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
 ) -> tuple[pl.LpProblem, dict[int: pl.LpVariable]]:
     M = len(L_manpower_shift)
@@ -52,13 +52,13 @@ def stage_1(
 
 def _stage_2_per_day(
         n:                  int,
-        L_manpower_shift:   list[int|float],    # shape: (W, 1)
+        L_manpower_shift:   list[int | float],    # shape: (W, 1)
         beta:               list[list[int]],    # shape: (T, W), binary
         e:                  int,                # shape: (1) -- same for all
-        l_n:                list[list],         # shape: (T, 1)
+        l_n:                list[float],         # shape: (T, 1)
         alpha:              list[list[int]],    # shape: (T, S), binary
-        Y_n:                list[list],         # shape: (S, 1)
-        L_dp_shift:         list[int|float],    # shape: (S, 1)
+        Y_n:                list[int],         # shape: (S, 1)
+        L_dp_shift:         list[int | float],    # shape: (S, 1)
         f_n:                int = None,         # shape: (1) -- one per day (actually for all)
 ) -> tuple[pl.LpProblem, dict[int: pl.LpVariable]]:
     W = len(L_manpower_shift)
@@ -68,7 +68,7 @@ def _stage_2_per_day(
     # check params
     assert len(beta[0]) == W, len(beta[0])
     assert len(alpha[0]) == S and len(L_dp_shift) == S, (len(alpha[0]), len(L_dp_shift))
-    assert type(f_n) == int and type(e) == int , (type(f_n), type(e))
+    assert type(f_n) == int and type(e) == int, (type(f_n), type(e))
 
     # Decision Variables
     # a set of solution for each day
@@ -83,7 +83,7 @@ def _stage_2_per_day(
     # Constraints for quantity per time-gran for day n
     for t in range(T):
         problem += (
-            pl.LpSum(x_n[w] * beta[t][w] * e[t] * l_n[t] for w in range(W)) >=
+            pl.lpSum(x_n[w] * beta[t][w] * e * l_n[t] for w in range(W)) >=
             sum([alpha[t][s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)])
         )
 
@@ -93,20 +93,18 @@ def _stage_2_per_day(
             pl.lpSum(x_n[w] for w in range(W)) <= f_n
         )
 
-    print(f"Stage 2 day_{n}: {pl.LpStatus[problem.status]}, Objective: {problem.objective}")
-
     problem.solve()
     return problem, x_n
 
 
 def stage_2(
-        L_manpower_shift:   list[int|float],    # shape: (W, 1)
+        L_manpower_shift:   list[int | float],  # shape: (W, 1)
         beta:               list[list[int]],    # shape: (T, W), binary
         e:                  int,                # shape: (1) -- same for all
         l:                  list[list],         # shape: (N, T)
         alpha:              list[list[int]],    # shape: (T, S), binary
         Y:                  list[list],         # shape: (N, S)
-        L_dp_shift:         list[int|float],    # shape: (S, 1)
+        L_dp_shift:         list[int | float],  # shape: (S, 1)
         f:                  int = None,         # shape: (1) -- only one
 ) -> list[tuple[pl.LpProblem, dict[int: pl.LpVariable]]]:
     W = len(L_manpower_shift)
@@ -125,5 +123,15 @@ def stage_2(
         _stage_2_per_day(n, L_manpower_shift, beta, e, l[n], alpha, Y[n], L_dp_shift, f)
         for n in range(N)
     ]
+
+    # print result
+    i = 0
+    for problem, x_n in solutions:
+        print("\n=================")
+        print(f"Stage2 day_{i}: {pl.LpStatus[problem.status]}\n"
+              f"Objective: {pl.value(problem.objective)} = {problem.objective}")
+        for w in x_n.keys():
+            print(f"x_{w} =  {x_n[w].value()}", end='; ')
+        i += 1
 
     return solutions

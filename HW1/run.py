@@ -28,14 +28,12 @@ if __name__ == "__main__":
         beta = data.beta
     )
 
-    print(solved_problem.constraints)
-
     # 打印第一阶段的解
     print('-----')
     for x_n in x.values():
         print(x_n, x_n.value())
 
-    ignore = [i for i in range(len(x.values())) if list(x.values())[i] == 0]
+    ignore = [i for i in range(len(x.values())) if list(x.values())[i].value() == 0]
 
     data.gen_manpower_shifts(ignore=ignore)
 
@@ -51,3 +49,7 @@ if __name__ == "__main__":
         alpha=data.alpha,
         beta=data.beta
     )
+
+    staff_nums = [x_n[w].value() for problem, x_n in solutions for w in x_n.keys()]
+
+    data.get_manpower_shifts(staff_nums, to_csv='./output.csv')

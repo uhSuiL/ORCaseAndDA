@@ -3,7 +3,6 @@
 #  while for python lower than 3.6, there is no order in dict.
 # -------------------------------------------------------------
 
-# TODO: 时间单位应该一小时为单位, 对应人效是以小时为单位
 # 计算时间间隔精确到分钟(in L_xxx_shift, l)
 
 
@@ -51,16 +50,16 @@ class Data:
 
         return time_granularities
 
-    def gen_manpower_shifts(self, ignore: list[int] = None, lower = 4, upper = 9) -> dict[str: pd.DataFrame]:
+    def gen_manpower_shifts(self, ignore: list[int] = None, lower=4, upper=9) -> dict[str: pd.DataFrame]:
         # TODO: 改ignore, ignore实际上为要删除的人力班次的index
         if ignore is None:  # suppose to be: [(begin_tm_1, end_tm_1), ......]
             ignore = []
 
-        man_power_shifts: dict[str: pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, staff_num, duration]}
+        manpower_shifts: dict[str: pd.DataFrame] = dict()  # {day: [begin_tm, end_tm, staff_num, duration]}
         for day in list(self.dp_shift_tables.keys()):
-            dp_table = self.dp_shift_tables[day].drop(ignore, axis=0)  # TODO: 需确保dp_shift_tables中每张表的行号(index)是真实行号
+            dp_table = self.dp_shift_tables[day]
 
-            man_power_shifts_per_day = pd.DataFrame()
+            manpower_shifts_per_day = pd.DataFrame()
             for begin_time in dp_table['begin_tm'].values:
                 for record in dp_table[
                     (dp_table['end_tm'] >= begin_time + pd.Timedelta(lower, unit='hour')) &
@@ -68,14 +67,36 @@ class Data:
                 ][['end_tm', 'staff_num']].values:
                     end_time, staff_num = record.tolist()
                     new_df = pd.DataFrame({'begin_tm': [begin_time], 'end_tm': [end_time], 'staff_num': [staff_num], 'duration': [end_time - begin_time]})
-                    if man_power_shifts_per_day.empty:
-                        man_power_shifts_per_day = new_df
+                    if manpower_shifts_per_day.empty:
+                        manpower_shifts_per_day = new_df
                     else:
-                        man_power_shifts_per_day = pd.concat([man_power_shifts_per_day, new_df], axis=0)
-            man_power_shifts[str(day)] = man_power_shifts_per_day
+                        manpower_shifts_per_day = pd.concat([manpower_shifts_per_day, new_df], axis=0)
 
-        self.manpower_shift_tables = man_power_shifts
-        return man_power_shifts  # {day: [begin_tm, end_tm, staff_num, duration]}
+            # 要保证人力表的index表示的是真实的序, 然后再用ignore删除指定的行
+            # 还要保证drop后人力表的index表示真实序, 然后才能通过解的序号索引出具体的班次
+            manpower_shifts[str(day)] = manpower_shifts_per_day.\
+                reset_index(drop=True).\
+                drop(ignore, axis=0).\
+                reset_index(drop=True)
+
+        self.manpower_shift_tables = manpower_shifts
+        return manpower_shifts  # {day: [begin_tm, end_tm, staff_num, duration]}
+
+    def get_manpower_shifts(self, staff_nums: list[list[int]], to_csv: str = None) -> dict[str: pd.DataFrame]:
+        manpower_shifts = dict()
+        days = list(self.manpower_shift_tables.keys())
+        for i in range(len(days)):
+            day = days[i]
+            manpower_shift = self.manpower_shift_tables[day]
+            manpower_shift['date'] = day
+            manpower_shift['begin_tm'] = manpower_shift['begin_tm'].dt.time
+            manpower_shift['end_tm'] = manpower_shift['end_tm'].dt.time
+            manpower_shift['staff_num'] = staff_nums[i]
+            manpower_shifts[day] = manpower_shift
+
+        if type(to_csv) == str:
+            pd.concat(manpower_shifts.values(), keys=manpower_shifts.keys()).to_csv(to_csv, index=False)
+        return manpower_shifts
 
     @property
     def Y(self) -> list[list]:
