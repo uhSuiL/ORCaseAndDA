@@ -1,5 +1,5 @@
 # --------------------- ATTENTION -----------------------------
-#  the implementaion depends on the order in the `python dict`,
+#  the implementation depends on the order in the `python dict`,
 #  while for python lower than 3.6, there is no order in dict.
 # -------------------------------------------------------------
 
@@ -24,7 +24,7 @@ class Data:
 
         # 每天的表都必须按照begin_tm从小到大排好序
         self.dp_shift_tables: dict[str: pd.DataFrame] = {
-            str(day): dp_table.sort_values(by=cols['begin_tm']).reset_index(drop=True) for day, dp_table in self.data.groupby(by='day', sort=True)
+            day.strftime('%Y-%m-%d'): dp_table.sort_values(by=cols['begin_tm']).reset_index(drop=True) for day, dp_table in self.data.groupby(by='day', sort=True)
         }
 
         self.manpower_shift_tables: dict[str: list] = None
@@ -46,7 +46,7 @@ class Data:
                     time_granularities_per_day = pd.concat([time_granularities_per_day, new_df], axis=0)
 
             time_granularities_per_day['duration'] = time_granularities_per_day['end_tm'] - time_granularities_per_day['begin_tm']
-            time_granularities[str(day)] = time_granularities_per_day
+            time_granularities[day] = time_granularities_per_day
 
         return time_granularities
 
@@ -74,7 +74,7 @@ class Data:
 
             # 要保证人力表的index表示的是真实的序, 然后再用ignore删除指定的行
             # 还要保证drop后人力表的index表示真实序, 然后才能通过解的序号索引出具体的班次
-            manpower_shifts[str(day)] = manpower_shifts_per_day.\
+            manpower_shifts[day] = manpower_shifts_per_day.\
                 reset_index(drop=True).\
                 drop(ignore, axis=0).\
                 reset_index(drop=True)
@@ -89,8 +89,8 @@ class Data:
             day = days[i]
             manpower_shift = self.manpower_shift_tables[day]
             manpower_shift['date'] = day
-            manpower_shift['begin_tm'] = manpower_shift['begin_tm'].dt.time
-            manpower_shift['end_tm'] = manpower_shift['end_tm'].dt.time
+            manpower_shift['begin_tm'] = manpower_shift['begin_tm'].dt.strftime('%H:%M')
+            manpower_shift['end_tm'] = manpower_shift['end_tm'].dt.strftime('%H:%M')
             manpower_shift['staff_num'] = staff_nums[i]
             manpower_shifts[day] = manpower_shift
 
