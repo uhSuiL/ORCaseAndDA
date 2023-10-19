@@ -4,6 +4,13 @@
 
 </div>
 
+# 说明
+
+- 运行结果已在 [output.csv](./output.csv)
+- 准备环境: `pip install -r requirements.txt`
+- 在ORCaseAndDA目录下(即当前目录)运行脚本: `python run.py`
+
+## 可以给我的GitHub仓库一个star: https://github.com/uhSuiL/ORCaseAndDA
 
 # Constraint
 
