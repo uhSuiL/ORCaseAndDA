@@ -33,6 +33,8 @@ if __name__ == "__main__":
     for x_n in x.values():
         print(x_n, x_n.value())
 
+    print(solved_problem)
+
     ignore = [i for i in range(len(x.values())) if list(x.values())[i].value() == 0]
 
     data.gen_manpower_shifts(ignore=ignore)
@@ -50,6 +52,9 @@ if __name__ == "__main__":
         beta=data.beta
     )
 
-    staff_nums = [x_n[w].value() for problem, x_n in solutions for w in x_n.keys()]
+    staff_nums = []
+    for n in range(len(solutions)):
+        prob, x_n = solutions[n]
+        staff_nums.append([x_n_t.value() for x_n_t in x_n.values()])
 
     data.get_manpower_shifts(staff_nums, to_csv='./output.csv')

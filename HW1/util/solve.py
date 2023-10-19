@@ -36,7 +36,7 @@ def stage_1(
         for t in range(T):
             problem += (
                 pl.lpSum(beta[t][m] * x[m] * e * l[n][t] for m in range(M)) >=
-                sum([alpha[t][s] * (Y[n][s] / L_dp_shift[s]) * l[n][s] for s in range(S)])
+                sum([alpha[t][s] * (Y[n][s] / L_dp_shift[s]) * l[n][t] for s in range(S)])
             )
 
     # Constraints for manpower for a month if f is given
@@ -86,6 +86,7 @@ def _stage_2_per_day(
             pl.lpSum(x_n[w] * beta[t][w] * e * l_n[t] for w in range(W)) >=
             sum([alpha[t][s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)])
         )
+        print(sum([alpha[t][s] * (Y_n[s] / L_dp_shift[s]) * l_n[t] for s in range(S)]))
 
     # Constraints for manpower in day n
     if f_n is not None:

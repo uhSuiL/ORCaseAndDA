@@ -49,7 +49,7 @@ $min\;\Sigma_{m=1}^M x_mL_m$
 
 $s.t.$ 
 
-$\Sigma_{m=1}^M \beta_{tm} x_m e_{nt} + s_{tn}^- - s_{nt}^+ \geq \Sigma_{s=1}^S \alpha_{ts} \frac{Y_{ns}}{L_s}l_{nt}\;\forall{t}, \forall{n}$ 
+$\Sigma_{m=1}^M \beta_{tm} x_m e l_{nt} + s_{tn}^- - s_{nt}^+ \geq \Sigma_{s=1}^S \alpha_{ts} \frac{Y_{ns}}{L_s}l_{nt}\;\forall{t}, \forall{n}$ 
 
 $\Sigma_{m=1}^M x_{m} \leq f$
 
