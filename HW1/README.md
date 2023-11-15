@@ -4,6 +4,13 @@
 
 </div>
 
+# 说明
+
+- 运行结果已在 [output.csv](./output.csv)
+- 准备环境: `pip install -r requirements.txt`
+- 在ORCaseAndDA目录下(即当前目录)运行脚本: `python run.py`
+
+## 可以给我的GitHub仓库一个star: https://github.com/uhSuiL/ORCaseAndDA
 
 # Constraint
 
@@ -49,7 +56,7 @@ $min\;\Sigma_{m=1}^M x_mL_m$
 
 $s.t.$ 
 
-$\Sigma_{m=1}^M \beta_{tm} x_m e_{nt} + s_{tn}^- - s_{nt}^+ \geq \Sigma_{s=1}^S \alpha_{ts} \frac{Y_{ns}}{L_s}l_{nt}\;\forall{t}, \forall{n}$ 
+$\Sigma_{m=1}^M \beta_{tm} x_m e l_{nt} + s_{tn}^- - s_{nt}^+ \geq \Sigma_{s=1}^S \alpha_{ts} \frac{Y_{ns}}{L_s}l_{nt}\;\forall{t}, \forall{n}$ 
 
 $\Sigma_{m=1}^M x_{m} \leq f$
 
