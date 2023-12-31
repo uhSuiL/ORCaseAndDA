@@ -31,24 +31,24 @@ class Node:
 
 		# 首元素
 		line: list = self.a_mat[self.visited_points[0]].tolist()
-		lb += line.pop(self.visited_points[1])
-		lb += np.min(line)
+		lb += line.pop(self.visited_points[1]) / 2
+		lb += np.min(line) / 2
 		# 中间元素
 		for i in range(len(self.visited_points))[1: -1]:
-			lb += self.a_mat[self.visited_points[i], self.visited_points[i - 1]]
-			lb += self.a_mat[self.visited_points[i], self.visited_points[i + 1]]
+			lb += self.a_mat[self.visited_points[i], self.visited_points[i - 1]] / 2
+			lb += self.a_mat[self.visited_points[i], self.visited_points[i + 1]] / 2
 		# 尾元素
 		line: list = self.a_mat[self.visited_points[-1]].tolist()
-		lb += line.pop(self.visited_points[-2])
-		lb += np.min(line)
+		lb += line.pop(self.visited_points[-2]) / 2
+		lb += np.min(line) / 2
 
 		return float(lb)
 
 
 def tsp_branch_and_bound(a_mat: np.ndarray, start_point: int = 0) -> Node:
 	point_ids = list(range(a_mat.shape[0]))
-	# best_node = tsp_greedy(a_mat.copy(), start_point)
-	best_node = Node(a_mat, current_len=float('inf'))
+	best_node = tsp_greedy(a_mat.copy(), start_point)
+	# best_node = Node(a_mat, current_len=float('inf'))
 
 	heap = PriorityQueue()
 	root = Node(a_mat, visited_points=[start_point])
