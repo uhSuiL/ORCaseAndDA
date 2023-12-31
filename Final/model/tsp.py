@@ -53,9 +53,9 @@ def tsp_branch_and_bound(a_mat: np.ndarray, start_point: int = 0) -> Node:
 	heap = PriorityQueue()
 	root = Node(a_mat, visited_points=[start_point])
 
-	heap.put((root.path_length, root))
+	heap.put(root)
 	while not heap.empty():
-		_, node = heap.get(timeout=0.5)
+		node = heap.get(timeout=0.5)
 		if len(node.visited_points) == len(point_ids) and (node.add_point(start_point).path_length <= best_node.path_length):
 			# 如果为叶子结点，路径加入原点；如果比当前最优路径更优，则替换当前最优路径，否则跳过
 			best_node = node
@@ -64,7 +64,7 @@ def tsp_branch_and_bound(a_mat: np.ndarray, start_point: int = 0) -> Node:
 			for i in range(len(point_ids)):
 				if i not in node.visited_points:
 					new_node = deepcopy(node).add_point(i)
-					heap.put((new_node.path_length, new_node))
+					heap.put(new_node)
 
 	return best_node
 
