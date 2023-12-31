@@ -13,6 +13,9 @@ class Node:
 	def __str__(self):
 		return f'path={self.visited_points}, len={self.path_length}'
 
+	def __lt__(self, other):
+		return self.lower_bound() < other.lower_bound()
+
 	def add_point(self, point: int):
 		self.path_length += self.a_mat[self.visited_points[-1], point]
 		self.visited_points.append(point)
@@ -44,7 +47,7 @@ class Node:
 
 def tsp_branch_and_bound(a_mat: np.ndarray, start_point: int = 0) -> Node:
 	point_ids = list(range(a_mat.shape[0]))
-	best_node = tsp_greedy(a_mat.copy(), start_point)
+	# best_node = tsp_greedy(a_mat.copy(), start_point)
 	best_node = Node(a_mat, current_len=float('inf'))
 
 	heap = PriorityQueue()
@@ -53,7 +56,7 @@ def tsp_branch_and_bound(a_mat: np.ndarray, start_point: int = 0) -> Node:
 	heap.put((root.path_length, root))
 	while not heap.empty():
 		_, node = heap.get(timeout=0.5)
-		if node.path_length == len(point_ids) and (node.add_point(start_point).path_length <= best_node.path_length):
+		if len(node.visited_points) == len(point_ids) and (node.add_point(start_point).path_length <= best_node.path_length):
 			# 如果为叶子结点，路径加入原点；如果比当前最优路径更优，则替换当前最优路径，否则跳过
 			best_node = node
 		elif node.lower_bound() < best_node.path_length:
@@ -61,8 +64,6 @@ def tsp_branch_and_bound(a_mat: np.ndarray, start_point: int = 0) -> Node:
 			for i in range(len(point_ids)):
 				if i not in node.visited_points:
 					new_node = deepcopy(node).add_point(i)
-					# new_node = Node(a_mat, node.visited_points, node.path_length)
-					# new_node.add_point(i)
 					heap.put((new_node.path_length, new_node))
 
 	return best_node
