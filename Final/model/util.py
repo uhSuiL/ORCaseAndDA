@@ -32,11 +32,11 @@ class GreatCircle:
 
 class AdjacencyMat:
 	@staticmethod
-	def from_fully_connected(coords: list[tuple], distance_fn = GreatCircle(), diagonal = float('inf')) -> np.ndarray:
+	def from_fully_connected(coords, distance_fn = GreatCircle(), diagonal = float('inf')) -> np.ndarray:
 		num_point = len(coords)
 		a_mat = np.ones((num_point, num_point)) * diagonal
 		for i in range(num_point):
 			for j in range(num_point):
 				if i != j:
-					a_mat[i, j] = distance_fn(*coords[i], *coords[j])
+					a_mat[i, j] = distance_fn(lon1=coords[i][0], lat1=coords[i][1], lon2=coords[j][0], lat2=coords[j][1])
 		return a_mat
