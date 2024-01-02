@@ -1,21 +1,22 @@
 import time
 import numpy as np
-from util import is_land, GreatCircle, AdjacencyMat
-from tsp import tsp_branch_and_bound
+from .util import is_land, GreatCircle, AdjacencyMat
+from .tsp import tsp_branch_and_bound
 from copy import deepcopy
+from multiprocessing import Queue
 
 
 class Particle:
 
 	def __init__(self, particle_dim, demand_coords: np.ndarray):
-		random_indices = np.random.choice(demand_coords.shape[0], particle_dim / 2)
-
-		self.position = demand_coords[random_indices].flatten()
+		random_indices = np.random.choice(demand_coords.shape[0], int(particle_dim / 2))
+		self.position = demand_coords[random_indices, :].flatten()
 		self.velocity = np.random.uniform(0, 0.01, particle_dim)
+
 		assert self.position.shape[-1] == self.velocity.shape[-1] == particle_dim, \
 			(self.position.shape, self.velocity.shape)
 
-	def fitness_value(self, start_coord: tuple):
+	def fitness_value(self, start_coord: tuple | np.ndarray):
 		coords = np.concatenate([start_coord, self.coords], axis=0)
 		a_mat = AdjacencyMat.from_fully_connected(coords)
 		node = tsp_branch_and_bound(a_mat)
@@ -45,14 +46,14 @@ class Particle:
 		return np.sum(violations)
 
 	@staticmethod
-	def better(particle1, particle2, demand_coords, distance_limit):
+	def better(particle1, particle2, demand_coords: np.ndarray, start_coord: np.ndarray, distance_limit: float):
 		if particle2.space_violation < particle1.space_violation:
 			return particle2
 		elif particle2.space_violation == particle1.space_violation:
 			if particle2.demand_violation(demand_coords, distance_limit) < particle1.demand_violation(demand_coords, distance_limit):
 				return particle2
 			elif particle2.demand_violation(demand_coords, distance_limit) == particle1.demand_violation(demand_coords, distance_limit):
-				if particle2.fitness_value < particle1.fitness_value:
+				if particle2.fitness_value(start_coord) < particle1.fitness_value(start_coord):
 					return particle2
 		return particle1
 
@@ -66,10 +67,15 @@ class Particle:
 		self.position += self.velocity
 
 
-def pso(demand_coords, queue, num_iter, num_particle, num_station, distance_limit) -> Particle:
+def pso(demand_coords: np.ndarray, start_coord: np.ndarray, queue: Queue, *,
+		num_iter: int, num_particle: int, num_station: int, distance_limit: float, omega: float, phi: float) -> Particle:
+
+	assert type(demand_coords) is np.ndarray, f"[Type not match] demand_coords is {type(demand_coords)}"
+	assert type(start_coord) is np.ndarray, f"[Type not match] demand_coords is {type(start_coord)}"
+
 	particle_dim = num_station * 2
 	populations: list[tuple] = [(Particle(particle_dim, demand_coords), Particle(particle_dim, demand_coords))] * num_particle  # (p, p_best)
-	g_best = Particle(particle_dim, demand_coords)
+	g_best: Particle = Particle(particle_dim, demand_coords)
 
 	for i in range(num_iter):
 		for n in range(num_particle):
@@ -77,10 +83,14 @@ def pso(demand_coords, queue, num_iter, num_particle, num_station, distance_limi
 
 			particle, p_best = populations[n]
 			original_p = deepcopy(particle)
-			particle.update()
-			p_best = Particle.better(particle, original_p, demand_coords, distance_limit)
-			g_best = Particle.better(p_best, g_best, demand_coords, distance_limit)
+			particle.update(g_best, p_best, omega, phi)
+			p_best = Particle.better(particle, original_p, demand_coords, start_coord, distance_limit)
+			g_best = Particle.better(p_best, g_best, demand_coords, start_coord, distance_limit)
 
-			queue.put((i, n, time.time() - start, g_best, num_iter, num_particle, num_station, distance_limit))
+			queue.put((
+				i, n, time.time() - start,
+				g_best.space_violation, g_best.demand_violation(demand_coords, distance_limit), g_best.fitness_value(start_coord), g_best.position,
+				num_iter, num_particle, num_station, distance_limit
+			))
 
 	return g_best

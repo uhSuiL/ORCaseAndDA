@@ -10,7 +10,7 @@ def is_land(lat, lon):
 
 class GreatCircle:
 	def __init__(self, earth_radius = 6371):
-		self.earth_radius = earth_radius
+		self.earth_radius = earth_radius  # km
 
 	def __call__(self, lat1, lon1, lat2, lon2):
 		lat1_rad = math.radians(lat1)
