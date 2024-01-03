@@ -27,9 +27,29 @@ class Particle:
 		return np.array([(self.position[i], self.position[i + 1]) for i in range(0, self.position.shape[0], 2)])
 
 	@property
+	def illegal_coords(self):
+		num_illegal = 0
+		coords = self.coords
+		for lon, lat in coords:
+			if abs(lon) >= 180 or abs(lat) >= 90:
+				num_illegal += 1
+		return num_illegal
+
+	@property
 	def space_violation(self) -> float:
-		violations = np.apply_along_axis(lambda array: 0 if is_land(lon=array[0], lat=array[1]) else 1, 1, self.coords)
-		return np.sum(violations)
+		violation = 0
+		coords = self.coords
+		for lon, lat in coords:
+			try:
+				if not is_land(lon=lon, lat=lat):
+					violation += 1
+			except IndexError as ie:
+				print(lon, lat)
+				print(coords)
+				print(self.position)
+				print(self.velocity)
+				raise ie
+		return violation
 
 	def demand_violation(self, demand_coords: np.ndarray, distance_limit: float) -> float:
 		distance_to_closest_station = np.apply_along_axis(
@@ -37,9 +57,10 @@ class Particle:
 				GreatCircle.distance(lon1=coord[0], lat1=coord[1], lon2=d_coord[0], lat2=d_coord[1])
 				for coord in self.coords
 			]),
-			axis=0,
+			axis=1,
 			arr=demand_coords
 		)
+
 		violations = distance_to_closest_station - distance_limit / 2
 		violations[violations > 0] = 1
 		violations[violations <= 0] = 0
@@ -47,14 +68,17 @@ class Particle:
 
 	@staticmethod
 	def better(particle1, particle2, demand_coords: np.ndarray, start_coord: np.ndarray, distance_limit: float):
-		if particle2.space_violation < particle1.space_violation:
+		if particle2.illegal_coords < particle1.illegal_coords:
 			return particle2
-		elif particle2.space_violation == particle1.space_violation:
-			if particle2.demand_violation(demand_coords, distance_limit) < particle1.demand_violation(demand_coords, distance_limit):
+		elif particle2.illegal_coords == particle1.illegal_coords == 0:
+			if particle2.space_violation < particle1.space_violation:
 				return particle2
-			elif particle2.demand_violation(demand_coords, distance_limit) == particle1.demand_violation(demand_coords, distance_limit):
-				if particle2.fitness_value(start_coord) < particle1.fitness_value(start_coord):
+			elif particle2.space_violation == particle1.space_violation:
+				if particle2.demand_violation(demand_coords, distance_limit) < particle1.demand_violation(demand_coords, distance_limit):
 					return particle2
+				elif particle2.demand_violation(demand_coords, distance_limit) == particle1.demand_violation(demand_coords, distance_limit):
+					if particle2.fitness_value(start_coord) < particle1.fitness_value(start_coord):
+						return particle2
 		return particle1
 
 	def update(self, g_best, p_best, omega, phi):
@@ -68,16 +92,19 @@ class Particle:
 
 
 def pso(demand_coords: np.ndarray, start_coord: np.ndarray, queue: Queue, *,
-		num_iter: int, num_particle: int, num_station: int, distance_limit: float, omega: float, phi: float) -> Particle:
+		num_iter: int, num_particle: int, num_station: int, distance_limit: float, omega: float, phi: float,
+		track: list = None) -> Particle:
 
 	assert type(demand_coords) is np.ndarray, f"[Type not match] demand_coords is {type(demand_coords)}"
 	assert type(start_coord) is np.ndarray, f"[Type not match] demand_coords is {type(start_coord)}"
+	track = [1] if track is None else track
 
 	particle_dim = num_station * 2
-	populations: list[tuple] = [(Particle(particle_dim, demand_coords), Particle(particle_dim, demand_coords))] * num_particle  # (p, p_best)
+	populations: list[tuple] = [(Particle(particle_dim, demand_coords), Particle(particle_dim, demand_coords)) for i in range(num_particle)]  # (p, p_best)
 	g_best: Particle = Particle(particle_dim, demand_coords)
 
 	for i in range(num_iter):
+
 		for n in range(num_particle):
 			start = time.time()
 
@@ -87,10 +114,26 @@ def pso(demand_coords: np.ndarray, start_coord: np.ndarray, queue: Queue, *,
 			p_best = Particle.better(particle, original_p, demand_coords, start_coord, distance_limit)
 			g_best = Particle.better(p_best, g_best, demand_coords, start_coord, distance_limit)
 
-			queue.put((
-				i, n, time.time() - start,
-				g_best.space_violation, g_best.demand_violation(demand_coords, distance_limit), g_best.fitness_value(start_coord), g_best.position,
-				num_iter, num_particle, num_station, distance_limit
-			))
+			if n in track:
+				space_violation = np.NAN if particle.illegal_coords > 0 else particle.space_violation
+				demand_violation = np.NAN if particle.illegal_coords > 0 else particle.demand_violation(demand_coords, distance_limit)
+				fitness_value = np.NAN if particle.illegal_coords > 0 else particle.fitness_value(start_coord)
+				duration = time.time() - start
+
+				queue.put((
+					('track', n, i, duration),
+					particle.illegal_coords, space_violation, demand_violation, fitness_value,
+					particle.position,
+					num_iter, num_particle, num_station, distance_limit
+				))
+
+		queue.put((
+			('global best', i),
+			g_best.illegal_coords, g_best.space_violation, g_best.demand_violation(demand_coords, distance_limit), g_best.fitness_value(start_coord),
+			g_best.position,
+			num_iter, num_particle, num_station, distance_limit, omega, phi
+		))
+
+		print(f"config{num_iter, num_particle, num_station, distance_limit, omega, phi}\t--Iteration {i}")
 
 	return g_best
