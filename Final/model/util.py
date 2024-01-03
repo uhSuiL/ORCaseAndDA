@@ -19,8 +19,17 @@ class GreatCircle:
 		lon2_rad = math.radians(lon2)
 
 		delta_lon = lon2_rad - lon1_rad
-		central_angle = math.acos(math.sin(lat1_rad) * math.sin(lat2_rad) +
-								  math.cos(lat1_rad) * math.cos(lat2_rad) * math.cos(delta_lon))
+		_ = math.sin(lat1_rad) * math.sin(lat2_rad) + math.cos(lat1_rad) * math.cos(lat2_rad) * math.cos(delta_lon)
+		try:
+			# to avoid numeric problem like: 1.0000000000000002
+			if 0 < _ - 1 < 1e-5:
+				_ = 1
+			elif 0 < -1 - _ < 1e-5:
+				_ = -1
+			central_angle = math.acos(_)
+		except ValueError as ve:
+			print(lat1, lon1, lat2, lon2, _)
+			raise ve
 		distance = central_angle * self.earth_radius
 		return distance
 
